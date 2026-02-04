@@ -1,5 +1,8 @@
 package biz.anhld.anhphuongshop.userservice.controller;
 
+import biz.anhld.anhphuongshop.userservice.dto.RefreshRequest;
+import biz.anhld.anhphuongshop.userservice.entity.User;
+import biz.anhld.anhphuongshop.userservice.exception.BadRequestException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.oidc.StandardClaimNames;
@@ -52,17 +55,26 @@ public class UserController {
     return ResponseEntity.ok(response);
   }
 
+  @PostMapping("/refresh")
+  public ResponseEntity<JwtResponse> refreshToken(@Valid @RequestBody RefreshRequest refreshRequest) {
+    return ResponseEntity.ok(userService.refreshToken(refreshRequest));
+  }
+
   public static record UserInfoDto(String preferredUsername,
     String name,
+    Long userId,
     List<String> roles
   ) {}
 
   @GetMapping("/me")
-  public UserInfoDto getGretting(JwtAuthenticationToken auth) {
+  public UserInfoDto getGretting(JwtAuthenticationToken auth) throws BadRequestException {
+    String username = auth.getToken().getClaimAsString(StandardClaimNames.PREFERRED_USERNAME);
+    User user = userService.getUserByUsername(username);
     return new UserInfoDto(
-        auth.getToken().getClaimAsString(StandardClaimNames.PREFERRED_USERNAME),
-        auth.getToken().getClaimAsString(StandardClaimNames.NAME),
-        auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList());
+            username,
+            auth.getToken().getClaimAsString(StandardClaimNames.NAME),
+            user.getId(),
+            auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList());
   }
 
   

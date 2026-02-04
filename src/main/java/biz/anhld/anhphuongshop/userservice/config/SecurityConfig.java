@@ -93,6 +93,7 @@ public class SecurityConfig {
       requests.requestMatchers("/api/v1/users/me").authenticated();
       requests.requestMatchers("/api/v1/users/signup").permitAll();
       requests.requestMatchers("/api/v1/users/login").permitAll();
+      requests.requestMatchers("/api/v1/users/refresh").permitAll();
       requests.anyRequest().denyAll();
     });
 

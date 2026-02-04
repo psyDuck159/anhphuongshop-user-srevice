@@ -3,7 +3,8 @@ package biz.anhld.anhphuongshop.userservice.dto;
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter @Setter
+@Getter
+@Setter
 public class JwtResponse extends MessageResponse {
 
 	private Long id;
@@ -11,18 +12,17 @@ public class JwtResponse extends MessageResponse {
 	private String email;
 
 	private String type = "Bearer";
+
 	private String token;
+	private Integer expiresIn;
+	private Integer refreshExpiresIn;
+	private String refreshToken;
+	private String idToken;
+
+	public JwtResponse() {}
 
 	public JwtResponse(String message) {
 		super(message);
 	}
 
-	public JwtResponse(String accessToken, Long id, String username, String email) {
-		super();
-		this.token = accessToken;
-		this.id = id;
-		this.username = username;
-		this.email = email;
-	}
-  
 }

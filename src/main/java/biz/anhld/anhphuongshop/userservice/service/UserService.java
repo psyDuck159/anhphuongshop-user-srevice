@@ -1,33 +1,31 @@
 package biz.anhld.anhphuongshop.userservice.service;
 
+import biz.anhld.anhphuongshop.userservice.dto.*;
+import biz.anhld.anhphuongshop.userservice.exception.BadRequestException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-
-
+import org.springframework.boot.security.oauth2.server.resource.autoconfigure.OAuth2ResourceServerProperties.Jwt;
 
 import biz.anhld.anhphuongshop.userservice.entity.User;
-import biz.anhld.anhphuongshop.userservice.dto.LoginRequest;
-import biz.anhld.anhphuongshop.userservice.dto.SignupRequest;
-import biz.anhld.anhphuongshop.userservice.dto.JwtResponse;
-import biz.anhld.anhphuongshop.userservice.dto.MessageResponse;
+import biz.anhld.anhphuongshop.userservice.mapper.JwtMapper;
+import biz.anhld.anhphuongshop.userservice.dto.keycloak.TokenResponse;
 import biz.anhld.anhphuongshop.userservice.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Transactional
 @Slf4j
+@RequiredArgsConstructor
 public class UserService {
-  @Autowired
-  private KeycloakService keycloakService;
+  private final KeycloakService keycloakService;
   private final UserRepository userRepository;
+  private final JwtMapper jwtMapper;
 
-  public UserService(UserRepository userRepository) {
-    this.userRepository = userRepository;
-  }
 
   public String registerUser(SignupRequest signUpRequest) {
     if (userRepository.existsByUsername(signUpRequest.getUsername())) {
@@ -63,12 +61,28 @@ public class UserService {
       return new JwtResponse("User credentials are not valid");
     }
 
+    TokenResponse tokenResponse = keycloakService.getUserAccessToken(loginRequest.getUsername(), loginRequest.getPassword());
     
+    if (tokenResponse == null || tokenResponse.getAccessToken() == null) {
+      return new JwtResponse("Failed to retrieve access token");
+    }
 
-    String accessToken = keycloakService.getUserAccesToken(loginRequest.getUsername(), loginRequest.getPassword());
+    JwtResponse jwtResponse = jwtMapper.toJwtResponse(tokenResponse);
+    jwtResponse.setId(user.getId());
+    jwtResponse.setUsername(user.getUsername());
+    jwtResponse.setEmail(user.getEmail());
+    jwtResponse.setMessage("User logged in successfully");
 
-    return new JwtResponse(accessToken, user.getId(), user.getUsername(), user.getEmail());
+    return jwtResponse;
   }
 
-  
+  public JwtResponse refreshToken(RefreshRequest refreshRequest) {
+    TokenResponse accessToken = keycloakService.getUserAccessToken(refreshRequest.getRefreshToken());
+    return jwtMapper.toJwtResponse(accessToken);
+  }
+
+  public User getUserByUsername(String username) throws BadRequestException {
+    return userRepository.findByUsername(username)
+            .orElseThrow(() -> new BadRequestException(username + " Not Found"));
+  }
 }

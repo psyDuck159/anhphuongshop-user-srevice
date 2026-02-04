@@ -25,8 +25,15 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.http.Header;
 import org.apache.http.entity.StringEntity;
 
+import biz.anhld.anhphuongshop.userservice.dto.keycloak.TokenResponse;
 import biz.anhld.anhphuongshop.userservice.dto.SignupRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.HttpEntity;
 
 @Service
 @Slf4j
@@ -64,7 +71,6 @@ public class KeycloakService {
   @Autowired
   private Keycloak keycloakInstance;
 
-
   public String getAdminAccesToken() {
     HttpClient httpClient = HttpClients.createDefault();
     HttpPost httpPost = new HttpPost(jwtIssuerUri);
@@ -90,31 +96,62 @@ public class KeycloakService {
     return accessToken;
   }
 
-  public String getUserAccesToken(String username, String password) {
-    HttpClient httpClient = HttpClients.createDefault();
-    HttpPost httpPost = new HttpPost(jwtIssuerUri);
-
-    List<BasicNameValuePair> params = new ArrayList<>();
-    params.add(new BasicNameValuePair("grant_type", "password"));
-    params.add(new BasicNameValuePair("client_id", jwtClientId));
-    params.add(new BasicNameValuePair("client_secret", jwtClientSecret));
-    params.add(new BasicNameValuePair("scope", "openid profile email"));
-    params.add(new BasicNameValuePair("username", username));
-    params.add(new BasicNameValuePair("password", password));
-
-    String accessToken = "";
+  public TokenResponse getUserAccessToken(String username, String password) {
     try {
-      httpPost.setEntity(new UrlEncodedFormEntity(params));
-      HttpResponse response = httpClient.execute(httpPost);
+      RestTemplate restTemplate = new RestTemplate();
 
-      // Handle the response
-      String responseBody = EntityUtils.toString(response.getEntity());
+      // Prepare request headers
+      HttpHeaders headers = new HttpHeaders();
+      headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-      accessToken = extractAccessToken(responseBody);
+      // Prepare request body
+      MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+      params.add("grant_type", "password");
+      params.add("client_id", jwtClientId);
+      params.add("client_secret", jwtClientSecret);
+      params.add("scope", "openid profile email");
+      params.add("username", username);
+      params.add("password", password);
+
+      // Create HTTP entity with headers and body
+      HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
+
+      // Make the request using RestTemplate
+      TokenResponse response = restTemplate.postForObject(jwtIssuerUri, request, TokenResponse.class);
+      log.info("Token: {}", response);
+      return response;
     } catch (Exception e) {
-      e.printStackTrace();
+      log.error("Error getting user access token: {}", e.getMessage());
+      return null;
     }
-    return accessToken;
+  }
+
+  public TokenResponse getUserAccessToken(String refreshToken) {
+    try {
+      RestTemplate restTemplate = new RestTemplate();
+
+      // Prepare request headers
+      HttpHeaders headers = new HttpHeaders();
+      headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+      // Prepare request body
+      MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+      params.add("grant_type", "refresh_token");
+      params.add("client_id", jwtClientId);
+      params.add("client_secret", jwtClientSecret);
+      params.add("refresh_token", refreshToken);
+
+      // Create HTTP entity with headers and body
+      HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
+
+      // Make the request using RestTemplate
+      TokenResponse response = restTemplate.postForObject(jwtIssuerUri, request, TokenResponse.class);
+      log.info("Token: {}", response);
+      return response;
+    } catch (Exception e) {
+      log.error("Error getting user access token: {}", e.getMessage());
+      return null;
+    }
   }
 
   private static String extractAccessToken(String jsonResponse) {
