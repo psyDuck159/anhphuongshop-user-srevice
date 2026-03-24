@@ -1,16 +1,20 @@
 package biz.anhld.anhphuongshop.userservice.controller;
 
 import biz.anhld.anhphuongshop.userservice.dto.RefreshRequest;
+import biz.anhld.anhphuongshop.userservice.dto.UserResponse;
 import biz.anhld.anhphuongshop.userservice.entity.User;
 import biz.anhld.anhphuongshop.userservice.exception.BadRequestException;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.oidc.StandardClaimNames;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import biz.anhld.anhphuongshop.userservice.dto.JwtResponse;
@@ -65,6 +69,20 @@ public class UserController {
     Long userId,
     List<String> roles
   ) {}
+
+  @GetMapping
+  public ResponseEntity<Page<UserResponse>> getUsers(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(required = false) String search
+  ) {
+    return ResponseEntity.ok(userService.getUsers(page, size, search));
+  }
+
+  @GetMapping("/{id}")
+  public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) throws BadRequestException {
+    return ResponseEntity.ok(userService.getUserById(id));
+  }
 
   @GetMapping("/me")
   public UserInfoDto getGretting(JwtAuthenticationToken auth) throws BadRequestException {

@@ -94,6 +94,8 @@ public class SecurityConfig {
       requests.requestMatchers("/api/v1/users/signup").permitAll();
       requests.requestMatchers("/api/v1/users/login").permitAll();
       requests.requestMatchers("/api/v1/users/refresh").permitAll();
+      requests.requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/users").authenticated();
+      requests.requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/users/{id}").permitAll();
       requests.anyRequest().denyAll();
     });
 

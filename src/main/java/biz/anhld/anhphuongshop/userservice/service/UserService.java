@@ -2,6 +2,9 @@ package biz.anhld.anhphuongshop.userservice.service;
 
 import biz.anhld.anhphuongshop.userservice.dto.*;
 import biz.anhld.anhphuongshop.userservice.exception.BadRequestException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -42,7 +45,7 @@ public class UserService {
         encoder.encode(signUpRequest.getPassword()));
 
     userRepository.save(user);
-    String res = keycloakService.createUser(signUpRequest);
+    String res = keycloakService.createUser(signUpRequest, user.getId());
     log.info(res);
 
     return "User registered successfully!";
@@ -84,5 +87,22 @@ public class UserService {
   public User getUserByUsername(String username) throws BadRequestException {
     return userRepository.findByUsername(username)
             .orElseThrow(() -> new BadRequestException(username + " Not Found"));
+  }
+
+  public UserResponse getUserById(Long id) throws BadRequestException {
+    User user = userRepository.findById(id)
+            .orElseThrow(() -> new BadRequestException("User not found: " + id));
+    return new UserResponse(user.getId(), user.getUsername(), user.getEmail());
+  }
+
+  public Page<UserResponse> getUsers(int page, int size, String search) {
+    var pageable = PageRequest.of(page, size, Sort.by("id").ascending());
+    Page<biz.anhld.anhphuongshop.userservice.entity.User> users;
+    if (search != null && !search.isBlank()) {
+      users = userRepository.findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(search, search, pageable);
+    } else {
+      users = userRepository.findAll(pageable);
+    }
+    return users.map(u -> new UserResponse(u.getId(), u.getUsername(), u.getEmail()));
   }
 }

@@ -3,6 +3,7 @@ package biz.anhld.anhphuongshop.userservice.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
+import java.util.Map;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -166,15 +167,7 @@ public class KeycloakService {
     }
   }
 
-  public String createUser(SignupRequest signUpRequest) {
-    // String url = keycloakBaseUrl + "/admin/realms/" + keycloakRealm + "/users";
-    // HttpPost httpPost = new HttpPost(url);
-
-    // String adminAccessToken = getAdminAccesToken();
-    // httpPost.setHeader("Authorization", "Bearer " + adminAccessToken);
-
-    // httpPost.setHeader("Content-Type", "application/json");
-
+  public String createUser(SignupRequest signUpRequest, Long dbUserId) {
     try {
       UserRepresentation user = new UserRepresentation();
       user.setUsername(signUpRequest.getUsername());
@@ -190,9 +183,17 @@ public class KeycloakService {
       credential.setTemporary(false);
       user.setCredentials(List.of(credential));
       user.setRequiredActions(Collections.emptyList());
-      
 
       keycloakInstance.realm(keycloakRealm).users().create(user);
+
+      // Set userId attribute so it gets included in JWT via protocol mapper
+      List<UserRepresentation> created = keycloakInstance.realm(keycloakRealm)
+          .users().searchByUsername(signUpRequest.getUsername(), true);
+      if (!created.isEmpty()) {
+        UserRepresentation keycloakUser = created.get(0);
+        keycloakUser.setAttributes(Map.of("userId", List.of(dbUserId.toString())));
+        keycloakInstance.realm(keycloakRealm).users().get(keycloakUser.getId()).update(keycloakUser);
+      }
 
       return "User created successfully in Keycloak.";
     } catch (Exception e) {
