@@ -13,6 +13,10 @@ COPY mvnw .
 # Download dependencies (sẽ được cache nếu pom.xml không đổi)
 RUN mvn dependency:go-offline -B
 
+# Download OpenTelemetry Java Agent
+RUN wget -q https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.26.1/opentelemetry-javaagent.jar \
+    -O /app/opentelemetry-javaagent.jar
+
 # Copy source code
 COPY src ./src
 
@@ -30,8 +34,9 @@ WORKDIR /app
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
 
-# Copy jar file từ build stage
+# Copy jar file và OTel agent từ build stage
 COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/opentelemetry-javaagent.jar opentelemetry-javaagent.jar
 
 # Đổi ownership cho user non-root
 RUN chown -R appuser:appgroup /app
@@ -51,4 +56,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC"
 
 # Run application
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar --spring.config.location=/app/src/main/resources/application.properties"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -javaagent:/app/opentelemetry-javaagent.jar -jar app.jar --spring.config.location=/app/src/main/resources/application.properties"]

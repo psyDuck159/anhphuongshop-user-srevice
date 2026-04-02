@@ -90,6 +90,7 @@ public class SecurityConfig {
     });
 
     http.authorizeHttpRequests(requests -> {
+      requests.requestMatchers("/actuator/**").permitAll();
       requests.requestMatchers("/api/v1/users/me").authenticated();
       requests.requestMatchers("/api/v1/users/signup").permitAll();
       requests.requestMatchers("/api/v1/users/login").permitAll();
